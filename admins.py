@@ -1,15 +1,22 @@
-from typing import List, Dict, Union
+from typing import List
+
+from pyrogram.types import Chat, User
+
+import cache.admins
 
 
-admins: Dict[int, List[int]] = {}
+async def get_administrators(chat: Chat) -> List[User]:
+    get = cache.admins.get(chat.id)
 
+    if get:
+        return get
+    else:
+        administrators = await chat.get_members(filter="administrators")
+        to_set = []
 
-def set(chat_id: int, admins_: List[int]):
-    admins[chat_id] = admins_
+        for administrator in administrators:
+            if administrator.can_manage_voice_chats:
+                to_set.append(administrator.user.id)
 
-
-def get(chat_id: int) -> Union[List[int], bool]:
-    if chat_id in admins:
-        return admins[chat_id]
-
-    return False
+        cache.admins.set(chat.id, to_set)
+        return await get_administrators(chat)
